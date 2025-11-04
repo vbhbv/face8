@@ -9,7 +9,8 @@ from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 
 # ⚙️ إعدادات البوت والـ Logging
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") # يجب تعيين هذا المتغير في Railway
+# يجب تعيين هذا المتغير في Railway
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 logging.basicConfig(
@@ -36,7 +37,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
     chat_id = update.effective_chat.id
     url = update.message.text.strip()
     
-    # 🕵️‍♀️ التحقق من أن الرابط هو رابط فيسبوك (تحقق مبدئي لزيادة الكفاءة)
+    # 🕵️‍♀️ التحقق من أن الرابط هو رابط فيسبوك
     if not re.match(r"(https?://)?(www\.)?(facebook\.com|fb\.watch)/.*", url):
         await context.bot.send_message(
             chat_id=chat_id,
@@ -49,12 +50,12 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
         text="⏳ يتم معالجة الرابط وبدء التنزيل... الرجاء الانتظار."
     )
     
-    # 💡 توليد اسم ملف فريد (بابتكار لضمان عدم تضارب الملفات)
+    # 💡 توليد اسم ملف فريد 
     file_name = f"fb_video_{chat_id}_{update.update_id}.mp4"
     filepath = os.path.join(DOWNLOAD_DIR, file_name)
 
     try:
-        # 🛠️ إعدادات yt-dlp للسرعة والجودة (ابتكار: استخدام تنسيق mp4 مُحدد)
+        # 🛠️ إعدادات yt-dlp للسرعة والجودة
         ydl_opts = {
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'outtmpl': filepath,
@@ -64,11 +65,10 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
         }
         
         with YoutubeDL(ydl_opts) as ydl:
-            # 🚀 سرعة وموثوقية: استخدام yt-dlp لتحليل وتنزيل الفيديو
+            # 🚀 سرعة وموثوقية: استخدام yt-dlp 
             ydl.download([url])
             
-        # 📤 إرسال الملف إلى تيليجرام كفيديو (مبتكر: استخدام send_video)
-        # هذا يضمن أن يظهر الفيديو كفيديو قابل للتشغيل وليس ملفاً عادياً
+        # 📤 إرسال الملف إلى تيليجرام كفيديو
         with open(filepath, 'rb') as video_file:
             await context.bot.send_video(
                 chat_id=chat_id,
@@ -95,7 +95,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
             text=error_msg
         )
     finally:
-        # 🗑️ تنظيف الملف بعد الرفع (مهم جدًا لبيئة الاستضافة مثل Railway)
+        # 🗑️ تنظيف الملف بعد الرفع (ضروري لبيئة الاستضافة)
         if os.path.exists(filepath):
             os.remove(filepath)
             logger.info(f"Cleaned up file: {filepath}")
@@ -107,18 +107,17 @@ def main() -> None:
         logger.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
         return
         
-    # 💡 تطبيق جديد (مبتكر: استخدام ApplicationBuilder)
+    # 💡 تطبيق جديد (باستخدام Application.builder لتجنب خطأ 'Updater')
     application = Application.builder().token(TOKEN).build()
 
     # 🤝 إضافة معالجات الأوامر والرسائل
     application.add_handler(CommandHandler("start", start_command))
-    # 🧠 المرشحات (Filters) لمعالجة الرسائل النصية التي تبدو كروابط فيسبوك فقط
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex(r"(facebook\.com|fb\.watch)"), handle_facebook_link))
 
     # 👂 بدء تشغيل البوت
     logger.info("Bot is running...")
-    application.run_polling(poll_interval=1) # استخدام poll_interval لزيادة سرعة الاستجابة
+    # ✅ التصحيح الناري: استخدام run_polling مباشرة من Application
+    application.run_polling(poll_interval=1) 
 
 if __name__ == "__main__":
     main()
-
