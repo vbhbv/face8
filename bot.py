@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-import requests
+import requests # مكتبة مطلوبة لجلب الرابط الحقيقي (لروابط fb.watch)
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -26,11 +26,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# مسارات التخزين والذاكرة المؤقتة
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 FILE_ID_CACHE = {} 
-MAX_TELEGRAM_SIZE_MB = 1950 
+MAX_TELEGRAM_SIZE_MB = 1950 # الحد الأقصى الآمن للرفع
 
+# مُنفّذ المهام في الخلفية (لحركة yt-dlp في الخلفية)
 executor = ThreadPoolExecutor(max_workers=4) 
 
 # -----------------------------------------------------
@@ -114,7 +116,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
     chat_id = update.effective_chat.id
     url = update.message.text.strip()
     
-    # 📌 جلب الرابط الحقيقي (لروابط fb.watch)
+    # جلب الرابط الحقيقي (لروابط fb.watch)
     original_url = url
     if "fb.watch" in url:
         try:
@@ -123,7 +125,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception:
             url = original_url 
     
-    # 💾 التحقق من الـ Cache
+    # التحقق من الـ Cache
     if url in FILE_ID_CACHE:
         try:
             await context.bot.send_video(
@@ -133,6 +135,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             return
         except Exception:
+            # حذف الـ Cache إذا فشل إرسال الـ file_id
             FILE_ID_CACHE.pop(url, None)
             logger.warning(f"Failed to send cached video for {url}. Cache entry deleted.")
 
@@ -171,7 +174,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
             video_title = info.get('title', 'فيديو فيسبوك')
             total_bytes = info.get('filesize_approx') or info.get('filesize')
             
-            # 📏 التكيُّف الديناميكي للجودة
+            # التكيُّف الديناميكي للجودة
             if total_bytes and total_bytes > (MAX_TELEGRAM_SIZE_MB * 1024 * 1024):
                 formats = info.get('formats', [])
                 for fmt in formats:
@@ -295,7 +298,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
                 chat_id=chat_id,
                 text="⚠️ فشل الرفع بعد محاولات عديدة. (قد يكون حجم الملف تجاوز الحد الأقصى)."
             )
-            # 🧹 التنظيف الصارم عند فشل الرفع
+            # التنظيف الصارم عند فشل الرفع
             if os.path.exists(filepath):
                 os.remove(filepath)
                 logger.info(f"Hard cleanup: Deleted file after failed upload: {filepath}")
@@ -320,7 +323,7 @@ async def handle_facebook_link(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 # -----------------------------------------------------
-# 🏃 الدالة الرئيسية (main)
+# 🏃 الدالة الرئيسية (main) - تم التصحيح لـ PTB V20+
 # -----------------------------------------------------
 
 def main() -> None:
@@ -329,8 +332,8 @@ def main() -> None:
         logger.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
         return
         
-    # البناء الصحيح: Application بدلاً من Updater
-    application = Application.builder().token(TOKEN).build()
+    # التصحيح النهائي: استخدام Application وتضمين job_queue بشكل صحيح
+    application = Application.builder().token(TOKEN).concurrent_updates(True).build()
 
     # إضافة المعالجات (Handlers)
     application.add_handler(CommandHandler("start", start_command))
@@ -344,5 +347,4 @@ def main() -> None:
     application.run_polling(poll_interval=1) 
 
 if __name__ == "__main__":
-    # هذا السطر يضمن أن main() هي الدالة الوحيدة التي تعمل
     main()
