@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-import requests # مكتبة مطلوبة لجلب الرابط الحقيقي (لروابط fb.watch)
+import requests 
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 FILE_ID_CACHE = {} 
-MAX_TELEGRAM_SIZE_MB = 1950 # الحد الأقصى الآمن للرفع
+MAX_TELEGRAM_SIZE_MB = 1950 
 
-# مُنفّذ المهام في الخلفية (لحركة yt-dlp في الخلفية)
+# مُنفّذ المهام في الخلفية
 executor = ThreadPoolExecutor(max_workers=4) 
 
 # -----------------------------------------------------
@@ -53,7 +53,6 @@ def self_update_ytdlp():
     """تجبر yt-dlp على تحديث نفسه عند بدء التشغيل."""
     try:
         logger.info("Attempting yt-dlp self-update...")
-        # استخدام yt_dlp مباشرة للتحديث
         YoutubeDL({'quiet': True}).download(['ytsearch:yt-dlp --update'])
         logger.info("yt-dlp self-update complete.")
     except Exception as e:
@@ -332,7 +331,7 @@ def main() -> None:
         logger.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
         return
         
-    # التصحيح النهائي: استخدام Application وتضمين job_queue بشكل صحيح
+    # التصحيح النهائي: استخدام Application وتضمين job_queue بشكل صحيح (حل NoneType)
     application = Application.builder().token(TOKEN).concurrent_updates(True).build()
 
     # إضافة المعالجات (Handlers)
